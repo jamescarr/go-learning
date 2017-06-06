@@ -12,9 +12,9 @@ import (
 
 func createConfig() *sarama.Config {
   config := sarama.NewConfig()
-	config.Producer.RequiredAcks = sarama.WaitForLocal       // Only wait for the leader to ack
-	config.Producer.Compression = sarama.CompressionSnappy   // Compress messages
-	config.Producer.Flush.Frequency = 500 * time.Millisecond // Flush batches every 500ms
+  config.Producer.RequiredAcks = sarama.WaitForLocal       // Only wait for the leader to ack
+  config.Producer.Compression = sarama.CompressionSnappy   // Compress messages
+  config.Producer.Flush.Frequency = 500 * time.Millisecond // Flush batches every 500ms
   return config
 }
 
@@ -28,13 +28,13 @@ func main() {
   signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
   if err != nil {
-		log.Fatalln("Failed to start Sarama producer:", err)
-	}
+    log.Fatalln("Failed to start Sarama producer:", err)
+  }
   go func() {
-		for err := range producer.Errors() {
-			log.Println("Failed to write access log entry:", err)
-		}
-	}()
+    for err := range producer.Errors() {
+      log.Println("Failed to write access log entry:", err)
+    }
+  }()
 
   go func() {
     for {

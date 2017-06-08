@@ -1,0 +1,8 @@
+hash: 925ec0cdf52042b53f5cc7de8f24acc9afdf8ccb234e149a0966fcff0dc0f603
+updated: 2017-06-07T13:26:28.180396708-05:00
+imports:
+- name: github.com/bradfitz/gomemcache
+  version: 1952afaa557dc08e8e0d89eafab110fb501c1a2b
+  subpackages:
+  - memcache
+testImports: []

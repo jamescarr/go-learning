@@ -1,0 +1,5 @@
+package: jamescarr/go-learning/integrations/memcached
+import:
+- package: github.com/bradfitz/gomemcache
+  subpackages:
+  - memcache

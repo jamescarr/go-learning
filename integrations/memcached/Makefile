@@ -4,6 +4,9 @@ file_name := bigold
 generate_file:
 	dd if=/dev/urandom of=${file_name}file.dat bs=1048576 count=${file_size}
 
+up:
+	docker-compose up -d
+
 install:
 	glide install
 

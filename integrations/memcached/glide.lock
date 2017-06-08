@@ -1,8 +1,10 @@
-hash: 925ec0cdf52042b53f5cc7de8f24acc9afdf8ccb234e149a0966fcff0dc0f603
-updated: 2017-06-07T13:26:28.180396708-05:00
+hash: 5a58d8bddc88317fe31705df924add8e8dce1a6dcd1f8be96c54d5ab8adbf73c
+updated: 2017-06-07T23:56:35.914143996-05:00
 imports:
 - name: github.com/bradfitz/gomemcache
   version: 1952afaa557dc08e8e0d89eafab110fb501c1a2b
   subpackages:
   - memcache
+- name: github.com/stretchr/testify
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
 testImports: []

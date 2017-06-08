@@ -3,3 +3,5 @@ import:
 - package: github.com/bradfitz/gomemcache
   subpackages:
   - memcache
+- package: github.com/stretchr/testify
+  version: ^1.1.4

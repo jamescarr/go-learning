@@ -3,16 +3,15 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func failOnError(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
+const MC_HOST = "localhost:11211"
 
 func TestReadingBytes(t *testing.T) {
 	// because I'm a noob with go!
@@ -35,28 +34,28 @@ func TestReadingBytes(t *testing.T) {
 
 func TestStoreNumberOfChunks(t *testing.T) {
 	reader := bytes.NewReader([]byte("Here is a string...."))
-	mc := memcache.New("localhost:11211")
+	mc := memcache.New(MC_HOST)
 
-	chunker := NewChunker(Config{host: "localhost:11211"})
+	chunker := NewChunker(Config{host: MC_HOST})
 
 	chunker.store("foo", reader)
 
 	it, _ := mc.Get("foo")
 
-	assert.Equal(t, `{"chunks":1}`, string(it.Value))
+	assert.Equal(t, 1, read(it.Value).Chunks)
 }
 
 func TestSpecifyingChunkSize(t *testing.T) {
 	reader := bytes.NewReader([]byte("abcdef"))
-	mc := memcache.New("localhost:11211")
+	mc := memcache.New(MC_HOST)
 
-	chunker := NewChunker(Config{host: "localhost:11211", chunkSize: 2})
+	chunker := NewChunker(Config{host: MC_HOST, chunkSize: 2})
 
 	chunker.store("foo", reader)
 
 	it, _ := mc.Get("foo")
 
-	assert.Equal(t, `{"chunks":3}`, string(it.Value))
+	assert.Equal(t, 3, read(it.Value).Chunks)
 }
 
 func TestWhatGoesInIsWhatComesOut(t *testing.T) {
@@ -64,10 +63,33 @@ func TestWhatGoesInIsWhatComesOut(t *testing.T) {
 	writer := bufio.NewWriter(&b)
 	reader := bytes.NewReader([]byte("abcdef"))
 
-	chunker := NewChunker(Config{host: "localhost:11211", chunkSize: 2})
+	chunker := NewChunker(Config{host: MC_HOST, chunkSize: 2})
 	chunker.store("foo", reader)
 	chunker.get("foo", writer)
 
 	writer.Flush()
 	assert.Equal(t, "abcdef", b.String())
+}
+
+func TestChecksumIsComputed(t *testing.T) {
+	reader := bytes.NewReader([]byte("abcdef"))
+	hash := sha256.New()
+	hash.Write([]byte("abcdef"))
+	expectedChecksum := fmt.Sprintf("%x", hash.Sum(nil))
+	mc := memcache.New(MC_HOST)
+
+	chunker := NewChunker(Config{host: MC_HOST, chunkSize: 2})
+
+	chunker.store("foo", reader)
+
+	it, _ := mc.Get("foo")
+
+	assert.Equal(t, expectedChecksum, read(it.Value).CheckSum)
+
+}
+
+func read(str []byte) LargeValue {
+	val := LargeValue{}
+	json.Unmarshal(str, &val)
+	return val
 }

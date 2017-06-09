@@ -1,0 +1,10 @@
+hash: 75d5a4fcd49428e54f236749f4032efcb3f19a8973e514554a65ced79e69ef0b
+updated: 2017-06-09T17:55:00.415657107-05:00
+imports:
+- name: github.com/dghubble/sling
+  version: eb56e89ac5088bebb12eef3cb4b293300f43608b
+- name: github.com/google/go-querystring
+  version: 53e6ce116135b80d037921a7fdd5138cf32d7a8a
+  subpackages:
+  - query
+testImports: []

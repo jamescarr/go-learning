@@ -1,0 +1,8 @@
+package: jamescarr/go-graylog
+import:
+- package: github.com/hashicorp/go-cleanhttp
+- package: github.com/dghubble/sling
+  version: ^1.1.0
+- package: github.com/google/go-querystring
+- package: github.com/stretchr/testify
+  version: ^1.1.4

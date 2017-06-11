@@ -1,0 +1,8 @@
+package: jamescarr/go-learning/integrations/sql/postgres
+import:
+- package: github.com/lib/pq
+- package: github.com/mattes/migrate
+  version: ^3.0.1
+  subpackages:
+  - database/postgres
+  - source/github

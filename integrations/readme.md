@@ -7,10 +7,9 @@ Using Go by itself isn't enough, how can we use it with various other systems? T
 * rabbitmq
 
 ### Databases
-* postgresql
-* mysql
+* [SQL, GORM and more](https://github.com/jamescarr/go-learning/tree/master/integrations/sql)
 * redis
-* memcached
+* [memcached](https://github.com/jamescarr/go-learning/tree/master/integrations/memcached)
 
 ### Service Discovery
 * consul

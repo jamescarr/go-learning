@@ -10,18 +10,18 @@ deviate quite a bit since I tend to like to do a little exploration rather than 
 * [ ] Build distributable go binary
 
 ## REST
-* [ ] Build a REST Service
+* [x] Build a REST Service
+* [x] Build a REST client to talk to it
 * [ ] Explore other frameworks for building REST services in Go
-* [ ] Build a REST client to talk to it
 
 ## CLI
 * [ ] Write a CLI app that takes arguments
 
 
 ## Integrating
-* [ ] Interface with RabbitMQ and Kafka
-  * [ ] Publish messages
-  * [ ] Consume messages using multiple workers
-* [ ] Interact with Memcached
+* [x] Interface with RabbitMQ and Kafka
+  * [x] Publish messages
+  * [x] Consume messages using multiple workers
+* [x] Interact with Memcached
 * [ ] Interact with Redis
 * [ ] Basic CRUD app with postgresql

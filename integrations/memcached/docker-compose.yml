@@ -1,6 +1,18 @@
 version: "2"
 services:
-  cache:
+  cache0:
     image: memcached:1.4-alpine
     ports:
       - 11211:11211
+  cache1:
+    image: memcached:1.4-alpine
+    ports:
+      - 11212:11211
+  cache2:
+    image: memcached:1.4-alpine
+    ports:
+      - 11213:11211
+  cache3:
+    image: memcached:1.4-alpine
+    ports:
+      - 11214:11211

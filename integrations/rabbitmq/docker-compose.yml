@@ -1,0 +1,40 @@
+version: "2"
+services:
+  rabbit1:
+    image: learningstaircase/rabbitmq-cluster
+    hostname: rabbit1
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=pass
+      - ERLANG_COOKIE=abcdefg
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    command: bash -c "rabbitmq-plugins enable --offline rabbitmq_consistent_hash_exchange rabbitmq_sharding && rabbitmq-cluster"
+  rabbit2:
+    image: learningstaircase/rabbitmq-cluster
+    hostname: rabbit2
+    links:
+      - rabbit1
+    environment:
+      - ERLANG_COOKIE=abcdefg
+      - CLUSTER_WITH=rabbit1
+      - ENABLE_RAM=true
+      - RAM_NODE=true
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    command: bash -c "rabbitmq-plugins enable --offline rabbitmq_consistent_hash_exchange rabbitmq_sharding && rabbitmq-cluster"
+  rabbit3:
+    image: learningstaircase/rabbitmq-cluster
+    hostname: rabbit3
+    links:
+      - rabbit1
+      - rabbit2
+    environment:
+      - ERLANG_COOKIE=abcdefg
+      - CLUSTER_WITH=rabbit1
+    ports:
+      - "5674:5672"
+      - "15674:15672"
+    command: bash -c "rabbitmq-plugins enable --offline rabbitmq_consistent_hash_exchange rabbitmq_sharding && rabbitmq-cluster"

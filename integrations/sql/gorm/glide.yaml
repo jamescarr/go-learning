@@ -1,0 +1,4 @@
+package: jamescarr/go-learning/integrations/sql/gorm
+import:
+- package: github.com/jinzhu/gorm
+  version: ^1.0.0

@@ -30,6 +30,40 @@ func send(ch *amqp.Channel, key string, body string) {
 	log.Printf(" [x] Sent %s using key %s", body, key)
 }
 
+func declareExchangeAndQueue(ch *amqp.Channel) {
+	// declare exchange and queues
+	err := ch.ExchangeDeclare(
+		"logs-ingest", // name
+		"topic",       // type
+		true,          // durable
+		false,         // auto-deleted
+		false,         // internal
+		false,         // noWait
+		amqp.Table{
+			"alternate-exchange": "unrouted",
+		}, // arguments
+	)
+	failOnError(err, "")
+
+	_, err = ch.QueueDeclare("syslogs", true, false, false, false, nil)
+	failOnError(err, "Failed to declare queue")
+
+	ch.QueueBind("syslogs", "syslogs-0.foo.bar", "logs-ingest", false, nil)
+}
+
+func nonStopPublisher(ch *amqp.Channel) {
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for t := range ticker.C {
+			fmt.Println("Tick at ", t.UTC())
+			for i := 0; i <= 4; i++ {
+				key := fmt.Sprintf("syslogs-%d.foo.bar", i)
+				go send(ch, key, "test")
+			}
+		}
+	}()
+}
+
 func main() {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
@@ -43,33 +77,7 @@ func main() {
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	// declare exchange and queues
-	err = ch.ExchangeDeclare(
-		"logs-ingest", // name
-		"topic",       // type
-		true,          // durable
-		false,         // auto-deleted
-		false,         // internal
-		false,         // noWait
-		amqp.Table{
-			"alternate-exchange": "unrouted",
-		}, // arguments
-	)
-
-	ticker := time.NewTicker(time.Second)
-	go func() {
-		for t := range ticker.C {
-			fmt.Println("Tick at ", t.UTC())
-			for i := 0; i <= 4; i++ {
-				key := fmt.Sprintf("syslogs-%d.foo.bar", i)
-				go send(ch, key, "test")
-			}
-		}
-	}()
-
-	_, err = ch.QueueDeclare("syslogs", true, false, false, false, nil)
-	failOnError(err, "Failed to declare queue")
-	ch.QueueBind("syslogs", "syslogs-0.foo.bar", "logs-ingest", false, nil)
+	nonStopPublisher(ch)
 
 	NewWorker(1, ch, "syslogs")
 	NewWorker(2, ch, "syslogs")

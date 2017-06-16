@@ -30,25 +30,23 @@ func send(ch *amqp.Channel, key string, body string) {
 	log.Printf(" [x] Sent %s using key %s", body, key)
 }
 
-func declareExchangeAndQueue(ch *amqp.Channel) {
+func declareExchangeAndQueue(ch *amqp.Channel, exch string, qName string, routingKey string, args amqp.Table) {
 	// declare exchange and queues
 	err := ch.ExchangeDeclare(
-		"logs-ingest", // name
-		"topic",       // type
-		true,          // durable
-		false,         // auto-deleted
-		false,         // internal
-		false,         // noWait
-		amqp.Table{
-			"alternate-exchange": "unrouted",
-		}, // arguments
+		exch,    // name
+		"topic", // type
+		true,    // durable
+		false,   // auto-deleted
+		false,   // internal
+		false,   // noWait
+		args,
 	)
 	failOnError(err, "")
 
-	_, err = ch.QueueDeclare("syslogs", true, false, false, false, nil)
+	_, err = ch.QueueDeclare(qName, true, false, false, false, nil)
 	failOnError(err, "Failed to declare queue")
 
-	ch.QueueBind("syslogs", "syslogs-0.foo.bar", "logs-ingest", false, nil)
+	ch.QueueBind(qName, routingKey, exch, false, nil)
 }
 
 func nonStopPublisher(ch *amqp.Channel) {
@@ -64,24 +62,46 @@ func nonStopPublisher(ch *amqp.Channel) {
 	}()
 }
 
+func NewChannel(conn *amqp.Connection) *amqp.Channel {
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open the channel")
+	return ch
+}
+
 func main() {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
-	ch, err := conn.Channel()
-	failOnError(err, "Failed to open the channel")
+	ch := NewChannel(conn)
 	defer ch.Close()
 
 	sigs := make(chan os.Signal, 1)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
+	declareExchangeAndQueue(
+		ch,
+		"logs-ingest",
+		"syslogs",
+		"syslogs-0.foo.bar",
+		amqp.Table{"alternate-exchange": "unrouted"},
+	)
+
+	declareExchangeAndQueue(
+		ch,
+		"unrouted",
+		"unrouted.messages",
+		"#",
+		amqp.Table{},
+	)
 	nonStopPublisher(ch)
 
-	NewWorker(1, ch, "syslogs")
-	NewWorker(2, ch, "syslogs")
-	NewWorker(3, ch, "syslogs")
+	ch2 := NewChannel(conn)
+	defer ch.Close()
+	NewWorker(1, ch2, "syslogs")
+	NewWorker(2, ch2, "syslogs")
+	NewWorker(3, ch2, "syslogs")
 
 	fmt.Println("Publishing messages, hit ctrl+c to exit!")
 	<-sigs

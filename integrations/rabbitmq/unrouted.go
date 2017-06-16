@@ -16,10 +16,11 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func increment(t amqp.Table, field string) int {
-	n := 0
-	if val, ok := t[field].(int); ok {
-		n = val
+func increment(t amqp.Table, field string) int64 {
+	var n int64
+	n = 0
+	if val, ok := t[field]; ok {
+		n = val.(int64)
 	}
 	n++
 	t[field] = n
@@ -58,7 +59,7 @@ func main() {
 	//   - increment x-retries
 	//   - publish to the retries exch with ttl of 1000 ** x-retries
 	msgs, err := ch.Consume(
-		"unrouted",                       // queue
+		"unrouted.messages",              // queue
 		fmt.Sprintf("c-%d", os.Getpid()), // consumer
 		true,  // auto-ack
 		false, // exclusive
@@ -70,47 +71,56 @@ func main() {
 	failOnError(err, "Failed to register a consumer")
 
 	go func() {
+		log.Println("Consumin...")
 		for msg := range msgs {
 			log.Printf("[WORKER %d] Received message %s from exchange %s", os.Getpid(), msg.RoutingKey, msg.Exchange)
 			attempts := increment(msg.Headers, "x-attempts")
+			log.Printf("[WORKER %d] Attempt #%d", os.Getpid(), attempts)
 
 			if attempts%2 != 0 {
 				// publish to original exchange
 				exch := msg.Exchange
-				if val, ok := msg.Headers["x-original-exchange"].(string); ok {
-					exch = val
-					log.Printf("[WORKER %d] Using the original exchange %s.", os.Getpid(), val)
+				if val, ok := msg.Headers["x-original-exchange"]; ok {
+					exch = val.(string)
+				} else {
+					msg.Headers["x-original-exchange"] = exch
 				}
-				ch.Publish(
+				log.Printf("[WORKER %d] Republishing to exchange %s.", os.Getpid(), exch)
+				details := amqp.Publishing{
+					ContentType:     msg.ContentType,
+					Body:            msg.Body,
+					Headers:         msg.Headers,
+					ContentEncoding: msg.ContentEncoding,
+					DeliveryMode:    msg.DeliveryMode,
+					Priority:        attempts,
+					CorrelationId:   msg.CorrelationId,
+					MessageId:       msg.MessageId,
+					ReplyTo:         msg.ReplyTo,
+					Type:            msg.Type,
+					UserId:          msg.UserId,
+				}
+				e := ch.Publish(
 					exch,
 					msg.RoutingKey,
 					false, // mandatory
 					false, // immediate
-					amqp.Publishing{
-						ContentType:     msg.ContentType,
-						Body:            msg.Body,
-						Headers:         msg.Headers,
-						ContentEncoding: msg.ContentEncoding,
-						DeliveryMode:    msg.DeliveryMode,
-						Priority:        msg.Priority,
-						CorrelationId:   msg.CorrelationId,
-						MessageId:       msg.MessageId,
-						ReplyTo:         msg.ReplyTo,
-						Type:            msg.Type,
-						UserId:          msg.UserId,
-					})
+					details,
+				)
+				failOnError(e, "Failed publishing")
 			} else {
+				log.Printf("[WORKER %d] Republish failed, publushing to retry queue.", os.Getpid())
+				log.Printf("[WORKER %d] headers: %s.", os.Getpid(), msg.Headers)
 				// republish failed, let's increment retries and publish to the retry exchange with a ttl.
-				msg.Headers["x-original-exchange"] = msg.Exchange
-				retries := 0
+				var retries int64
+				retries = 0
 				if val, ok := msg.Headers["x-retries"]; ok {
-					retries = val.(int)
+					retries = val.(int64)
 				}
 				retries++
 				msg.Headers["x-retries"] = retries
 
 				ttl := int(math.Exp2(float64(2*retries))) * 1000
-				log.Println("[WORKER %d] Placing in retry queue with ttl of %d.", os.Getpid(), ttl)
+				log.Printf("[WORKER %d] Placing in retry queue with ttl of %d.", os.Getpid(), ttl)
 				ch.Publish(
 					"retry",
 					msg.RoutingKey,
@@ -122,7 +132,7 @@ func main() {
 						Headers:         msg.Headers,
 						ContentEncoding: msg.ContentEncoding,
 						DeliveryMode:    msg.DeliveryMode,
-						Priority:        msg.Priority,
+						Priority:        retries,
 						CorrelationId:   msg.CorrelationId,
 						MessageId:       msg.MessageId,
 						ReplyTo:         msg.ReplyTo,

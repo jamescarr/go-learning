@@ -18,8 +18,8 @@ func failOnError(err error, msg string) {
 
 func increment(t amqp.Table, field string) int {
 	n := 0
-	if val, ok := t[field]; ok {
-		n = int(val)
+	if val, ok := t[field].(int); ok {
+		n = val
 	}
 	n++
 	t[field] = n
@@ -70,7 +70,6 @@ func main() {
 	failOnError(err, "Failed to register a consumer")
 
 	go func() {
-		var exch string
 		for msg := range msgs {
 			log.Printf("[WORKER %d] Received message %s from exchange %s", os.Getpid(), msg.RoutingKey, msg.Exchange)
 			attempts := increment(msg.Headers, "x-attempts")
@@ -78,12 +77,12 @@ func main() {
 			if attempts%2 != 0 {
 				// publish to original exchange
 				exch := msg.Exchange
-				if val, ok := msg.Headers["x-original-exchange"]; ok {
-					exch := val
+				if val, ok := msg.Headers["x-original-exchange"].(string); ok {
+					exch = val
 					log.Printf("[WORKER %d] Using the original exchange %s.", os.Getpid(), val)
 				}
 				ch.Publish(
-					msg.Exchange,
+					exch,
 					msg.RoutingKey,
 					false, // mandatory
 					false, // immediate
@@ -105,7 +104,7 @@ func main() {
 				msg.Headers["x-original-exchange"] = msg.Exchange
 				retries := 0
 				if val, ok := msg.Headers["x-retries"]; ok {
-					retries := val
+					retries = val.(int)
 				}
 				retries++
 				msg.Headers["x-retries"] = retries

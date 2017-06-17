@@ -54,7 +54,7 @@ func nonStopPublisher(ch *amqp.Channel) {
 	go func() {
 		for t := range ticker.C {
 			fmt.Println("Tick at ", t.UTC())
-			for i := 0; i <= 4; i++ {
+			for i := 0; i <= 2; i++ {
 				key := fmt.Sprintf("syslogs-%d.foo.bar", i)
 				go send(ch, key, "test")
 			}

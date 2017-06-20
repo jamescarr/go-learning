@@ -10,15 +10,15 @@ import (
 	"syscall"
 )
 
-func failOnError(err error, msg string) {
+const (
+	maxPriority uint8 = 10
+)
+
+func FailOnError(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %s", msg, err)
 	}
 }
-
-const (
-	maxPriority uint8 = 10
-)
 
 func increment(t amqp.Table, field string) uint8 {
 	var n uint8
@@ -41,12 +41,20 @@ func getPriority(retries uint8) uint8 {
 	return priority
 }
 
+func GenerateTTL(retries uint8) int {
+	ttl := int(math.Exp2(float64(retries))) * 1000
+	if ttl > 64000 {
+		ttl = 64000
+	}
+	return ttl
+}
+
 func main() {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	failOnError(err, "Failed to connect to RabbitMQ")
+	FailOnError(err, "Failed to connect to RabbitMQ")
 
 	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
+	FailOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
 	ch.ExchangeDeclare(
@@ -63,7 +71,7 @@ func main() {
 		"x-dead-letter-exchange": "unrouted",
 		"x-max-priority":         maxPriority,
 	})
-	failOnError(err, "Failed to declare queue")
+	FailOnError(err, "Failed to declare queue")
 
 	ch.QueueBind("retries", "#", "retry", false, nil)
 
@@ -82,7 +90,7 @@ func main() {
 		nil,   // args
 	)
 
-	failOnError(err, "Failed to register a consumer")
+	FailOnError(err, "Failed to register a consumer")
 
 	go func() {
 		log.Println("Consumin...")
@@ -123,19 +131,13 @@ func main() {
 					false, // immediate
 					details,
 				)
-				failOnError(e, "Failed publishing")
+				FailOnError(e, "Failed publishing")
 			} else {
 				log.Printf("[WORKER %d] Republish failed, publushing to retry queue.", os.Getpid())
 				log.Printf("[WORKER %d] headers: %s.", os.Getpid(), msg.Headers)
 				// republish failed, let's increment retries and publish to the retry exchange with a ttl.
 				retries := increment(msg.Headers, "x-retries")
 				msg.Headers["x-retries"] = increment(msg.Headers, "x-retries")
-
-				ttl := int(math.Exp2(float64(retries))) * 1000
-
-				if ttl > 64000 {
-					ttl = 64000
-				}
 
 				priority := getPriority(retries)
 
@@ -153,7 +155,7 @@ func main() {
 					ReplyTo:         msg.ReplyTo,
 					Type:            msg.Type,
 					UserId:          msg.UserId,
-					Expiration:      fmt.Sprintf("%d", ttl),
+					Expiration:      fmt.Sprintf("%d", GenerateTTL(retries)),
 				}
 				log.Printf("[WORKER %d] sending message %s", os.Getpid(), message)
 				ch.Publish(

@@ -1,7 +1,7 @@
 version: "2"
 services:
   rabbit1:
-    image: learningstaircase/rabbitmq-cluster
+    build: .
     hostname: rabbit1
     environment:
       - RABBITMQ_DEFAULT_USER=user
@@ -10,9 +10,8 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-    command: bash -c "rabbitmq-plugins enable --offline rabbitmq_consistent_hash_exchange rabbitmq_sharding && rabbitmq-cluster"
   rabbit2:
-    image: learningstaircase/rabbitmq-cluster
+    build: .
     hostname: rabbit2
     links:
       - rabbit1
@@ -24,9 +23,8 @@ services:
     ports:
       - "5673:5672"
       - "15673:15672"
-    command: bash -c "rabbitmq-plugins enable --offline rabbitmq_consistent_hash_exchange rabbitmq_sharding && rabbitmq-cluster"
   rabbit3:
-    image: learningstaircase/rabbitmq-cluster
+    build: .
     hostname: rabbit3
     links:
       - rabbit1
@@ -37,4 +35,3 @@ services:
     ports:
       - "5674:5672"
       - "15674:15672"
-    command: bash -c "rabbitmq-plugins enable --offline rabbitmq_consistent_hash_exchange rabbitmq_sharding && rabbitmq-cluster"

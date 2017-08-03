@@ -110,7 +110,9 @@ func main() {
 				} else {
 					msg.Headers["x-original-exchange"] = exch
 				}
+
 				log.Printf("[WORKER %d] Republishing to exchange %s.", os.Getpid(), exch)
+
 				details := amqp.Publishing{
 					ContentType:     msg.ContentType,
 					Body:            msg.Body,
@@ -173,4 +175,29 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	<-sigs
+}
+
+type Consumer struct {
+	ch *amqp.Channel
+}
+
+func NewConsumer(ch amqp.Channel) Consumer {
+	consumer := Consumer{
+		ch: ch,
+	}
+	return consumer
+}
+
+func (c *Consumer) start() {
+	msgs, err := ch.Consume(
+		"unrouted.messages",              // queue
+		fmt.Sprintf("c-%d", os.Getpid()), // consumer
+		true,  // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,   // args
+	)
+	return msgs
+
 }

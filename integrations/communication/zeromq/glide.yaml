@@ -1,0 +1,3 @@
+package: github.com/jamescarr/go-learning/integrations/communication/zeromq
+import:
+- package: github.com/pebbe/zmq4
